@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+
+<head>
+
+	<meta charset="utf-8">
+
+	<link rel="stylesheet" href="css/styles.css" />
+	<link rel="stylesheet" href="./font/SofiaProRegular.ttf">
+	<title>Template 1a</title>
+	<script>
+		var isNS = (navigator.appName == "Netscape") ? 1 : 0;
+
+		if (navigator.appName == "Netscape") document.captureEvents(Event.MOUSEDOWN || Event.MOUSEUP);
+
+		function mischandler() {
+			return false;
+		}
+
+		function mousehandler(e) {
+			var myevent = (isNS) ? e : event;
+			var eventbutton = (isNS) ? myevent.which : myevent.button;
+			if ((eventbutton == 2) || (eventbutton == 3)) return false;
+		}
+		document.oncontextmenu = mischandler;
+		document.onmousedown = mousehandler;
+		document.onmouseup = mousehandler;
+	</script>
+
+</head>
+
+<body scroll="no">
+	<div class="title1">
+		<h2>QR Tool</h2>
+		<h3>V1.0.1</h3>
+	</div>
+	<div class="box">
+		<div class="header">Select Folder Output:</div>
+		<div class="line">
+			<div class="input-container-full">
+				<div class="input-container">
+					<button id="selectFolder" class="custom-button"></button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="box">
+		<div class="header">Select CSV File:</div>
+		<div class="line">
+			<div class="input-container-full">
+				<div class="input-container">
+					<button id="selectCSV" class="custom-button"></button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<button id="btnRun" class="custom-button">Run</button>
+
+	<script>
+		function getOS() {
+			var userAgent = window.navigator.userAgent,
+				platform = window.navigator.platform,
+				macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
+				windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
+				os = null;
+
+			if (macosPlatforms.indexOf(platform) != -1) {
+				os = "MAC";
+			} else if (windowsPlatforms.indexOf(platform) != -1) {
+				os = "WIN";
+			}
+			return os;
+		}
+	</script>
+	<!-- //láy giờ -->
+	<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/momentjs/latest/moment-timezone.min.js"></script>
+
+	<script src="js/libs/CSInterface.js"></script>
+	<script src="js/main.js"></script>
+	<script src="./ext.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,107 @@
+@font-face {
+	font-family: "Montserrat";
+	font-weight: 400;
+	font-style: normal;
+	src: url("Montserrat-Regular.ttf") format('truetype');
+}
+
+* {
+	font-family: Montserrat;
+}
+
+html {
+	overflow-x: hidden;
+	overflow-y: hidden;
+}
+
+
+/* CSS for the body */
+
+body {
+	background-color: #1d1d1d;
+	color: #c4c4c4;
+	font-family: Arial, sans-serif;
+}
+
+
+/* CSS for the title */
+
+.title1 {
+	text-align: center;
+	margin-bottom: 40px;
+	/* Adjust the margin as needed */
+}
+
+
+/* CSS for the container */
+
+.container {
+	max-width: 800px;
+	margin: 0 auto;
+	padding: 10px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	font-size: 12px;
+	background-color: #1d1d1d;
+}
+
+
+/* CSS for the boxes */
+
+.box {
+	flex: 1;
+	margin: 20px;
+	padding: 20px;
+	border: 1px solid #7b7b7b;
+	border-radius: 10px;
+	position: relative;
+	background: #232323;
+}
+
+.box .header {
+	position: absolute;
+	top: -25px;
+	left: 10px;
+	background: #1d1d1d;
+	color: white;
+	padding: 5px 10px;
+	border-radius: 10px;
+}
+
+
+/* CSS for buttons and input fields */
+
+button,
+select,
+input[type="text"] {
+	display: block;
+	width: 100%;
+	padding: 10px;
+	margin: 10px 0;
+	border-radius: 10px;
+	background: #333;
+	color: white;
+	border: none;
+	cursor: pointer;
+}
+
+#selectFolder,
+#selectCSV {
+	text-align: left;
+	height: 40px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	direction: rtl;
+}
+
+
+/* Other styles */
+
+#h2 {
+	font-size: 150px;
+	padding: 20px;
+	margin-left: 20px;
+	text-align: center;
+}
