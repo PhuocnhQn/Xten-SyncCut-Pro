@@ -1,7 +1,14 @@
 
-const QRCode = require('qrcode');
+const { NodeSSH } = require('node-ssh');
 const fs = require('fs');
+const AdmZip = require('adm-zip');
+const WebSocket = require('ws');
+const progress = require('progress-stream'); // Import progress-stream
+const SSH2Client = require('ssh2').Client; // Import ssh2 directly
+
+
 const csInterface = new CSInterface();
+
 (function () {
 	'use strict';
 	var extPath;
@@ -13,147 +20,162 @@ const csInterface = new CSInterface();
 		extPath = extPath.substring(8, extPath.length - 11);
 	}
 	try {
-		selectFoder();
-		checkStorage();
 		main();
-
-		// alert("Start");
-		// alert(extPath);
 	} catch (error) {
 		alert(error)
 	}
 
 }());
 function main() {
-	document.getElementById('btnRun').addEventListener('click', function () {
-		// csInterface.evalScript('main("' + storedEncodedPath + '","' + stringData + '")', function(result) {
-		var storedPathFolder = localStorage.getItem('pathFolder');
-		var storedPathCSV = localStorage.getItem('pathCSV');
-		const csvData = readCSVFile(storedPathCSV);
-		if (!csvData || csvData.length === 0) {
-			alert("Lỗi: Không thể đọc dữ liệu từ file CSV hoặc file rỗng");
-			return;
-		}
-		// Bắt đầu xử lý từ hàng thứ 2 (index 1)
-		processRow(1, csvData, storedPathFolder).catch(error => {
-			alert("Lỗi khi xử lý dữ liệu: " + error);
-		});
-	});
-}
-
-// Không cần hàm handleFileSelect nữa vì chúng ta xử lý file trực tiếp trong runScript
-function processRow(index, csvData, output) {
-	if (index < csvData.length) {
-		return createQR(csvData[index][1])
-			.then(pathFile => {
-				pathFile = encodeURIComponent(pathFile);
-				let encodedOutput = encodeURIComponent(output);
-				return new Promise((resolve, reject) => {
-					csInterface.evalScript('test("' + pathFile + '", "' + csvData[index][0] + '", "' + encodedOutput + '", "' + index + '")', result => {
-						if (result === 'error') {
-							reject('Lỗi khi thực thi evalScript');
-						} else {
-							resolve();
-						}
-					});
-				});
-			})
-			.then(() => processRow(index + 1, csvData, output))
-			.catch(error => {
-				alert('Lỗi: ' + error);
-			});
-	} else {
-		alert('Đã hoàn thành xử lý tất cả các dòng dữ liệu.');
-	}
-}
-function readCSVFile(filePath) {
 	try {
-		const content = fs.readFileSync(filePath, 'utf8');
-		const lines = content.split('\n');
-		const data = [];
+		const ssh = new NodeSSH();
+		// Tạo WebSocket server để giao tiếp với client
+		const wss = new WebSocket.Server({ port: 8080 });
 
-		for (let i = 0; i < lines.length; i++) {
-			if (lines[i].trim() !== '') {
-				const columns = lines[i].split(',');
-				data.push(columns);
+		wss.on('connection', (ws) => {
+			console.log('Client kết nối thành công.');
+
+			// Hàm tải và giải nén file
+			async function downloadAndExtractFile(remoteFilePath, localFilePath, extractPath, ws, progressId) {
+				try {
+					ws.send(JSON.stringify({ progress: 0, id: progressId }));
+
+					// Kết nối với server SSH
+					const sshClient = new SSH2Client();
+					sshClient.on('ready', () => {
+						console.log('SSH Client đã sẵn sàng.');
+
+						const ensureDirectoryExists = (path) => {
+							if (!fs.existsSync(path)) {
+								fs.mkdirSync(path, { recursive: true });
+							}
+						};
+
+						ensureDirectoryExists('C:/Users/Phuoc/Downloads/FileZip');
+						ensureDirectoryExists(extractPath);
+
+						// Lấy kích thước file từ server để tính toán tiến trình
+						sshClient.exec(`stat -c %s ${remoteFilePath}`, (err, stream) => {
+							if (err) {
+								ws.send(JSON.stringify({ error: err.message, id: progressId }));
+								return;
+							}
+
+							let fileSize = 0;
+							stream.on('data', (data) => {
+								fileSize = parseInt(data.toString().trim(), 10);
+							});
+
+							stream.on('end', () => {
+								// Tạo đối tượng progress stream để theo dõi tiến trình tải
+								const progressStream = progress({
+									length: fileSize,
+									time: 100, // cập nhật mỗi 100ms
+								});
+
+								progressStream.on('progress', (progressData) => {
+									const percent = Math.round((progressData.transferred / fileSize) * 100);
+									const speedKBps = (progressData.speed / 1024).toFixed(2); // Tốc độ tải KB/s
+									const downloadedSizeKB = (progressData.transferred / 1024).toFixed(2); // Dữ liệu tải được KB
+									const downloadedSizeMB = (progressData.transferred / (1024 * 1024)).toFixed(2); // Dữ liệu tải được MB
+									const totalSizeMB = (fileSize / (1024 * 1024)).toFixed(2); // Tổng dung lượng MB
+
+									ws.send(JSON.stringify({
+										progress: percent,
+										speed: `${speedKBps} KB/s`,
+										downloaded: `${downloadedSizeMB} MB / ${totalSizeMB} MB`, // Hiển thị tổng số đã tải
+										id: progressId
+									}));
+								});
+
+
+								// Sử dụng sftp để tải file
+								sshClient.sftp((err, sftp) => {
+									if (err) {
+										ws.send(JSON.stringify({ error: err.message, id: progressId }));
+										return;
+									}
+
+									const readStream = sftp.createReadStream(remoteFilePath);
+									const writeStream = fs.createWriteStream(localFilePath);
+
+									// Tải file với stream và theo dõi tiến trình
+									readStream.pipe(progressStream).pipe(writeStream);
+
+									writeStream.on('finish', () => {
+										ws.send(JSON.stringify({ progress: 50, id: progressId }));
+										ws.send(JSON.stringify({ text: 'Tệp đã tải xuống, bắt đầu giải nén...', id: progressId }));
+
+										// Giải nén file
+										try {
+											const zip = new AdmZip(localFilePath);
+											zip.extractAllTo(extractPath, true);
+											ws.send(JSON.stringify({ progress: 80, id: progressId }));
+											ws.send(JSON.stringify({ text: 'Tệp đã được giải nén.', id: progressId }));
+										} catch (error) {
+											ws.send(JSON.stringify({ error: `Lỗi giải nén: ${error.message}`, id: progressId }));
+										}
+
+										fs.unlinkSync(localFilePath);
+
+										ws.send(JSON.stringify({ progress: 100, id: progressId }));
+										ws.send(JSON.stringify({ text: 'Tệp ZIP đã được xóa.', id: progressId }));
+
+										sshClient.end();
+									});
+								});
+							});
+						});
+					});
+
+					// Kết nối SSH với thông tin xác thực
+					sshClient.connect({
+						host: '117.2.132.75',
+						username: 'phuocpr',
+						privateKey: fs.readFileSync('C:/Users/Phuoc/Videos/10月21日/id_rsa'),
+						passphrase: 'phuocpr',
+					}).catch((error) => {
+						ws.send(JSON.stringify({ error: `Lỗi kết nối SSH: ${error.message}`, id: progressId }));
+					});
+				} catch (error) {
+					ws.send(JSON.stringify({ error: error.message, id: progressId }));
+				}
 			}
-		}
 
-		return data;
-	} catch (error) {
-		alert('Error reading CSV file: ' + error.message);
-		return null;
-	}
-}
+			// Lắng nghe sự kiện click cho 2 nút tải
+			document.getElementById('download-button-1').addEventListener('click', () => {
+				try {
+					downloadAndExtractFile(
+						'/var/www/phuocnguyen.com/filezip/test.zip',
+						'C:/Users/Phuoc/Downloads/FileZip/myfile1.zip',
+						'C:/Users/Phuoc/Downloads/FileZip/Extracted1',
+						ws,
+						1
+					);
+				} catch (error) {
+					alert(error.message);
+				}
+			});
 
+			document.getElementById('download-button-2').addEventListener('click', () => {
+				try {
+					downloadAndExtractFile(
+						'/var/www/phuocnguyen.com/filezip/test1.zip',
+						'C:/Users/Phuoc/Downloads/FileZip/myfile2.zip',
+						'C:/Users/Phuoc/Downloads/FileZip/Extracted1',
+						ws,
+						2
+					);
+				} catch (error) {
+					alert(error.message);
+				}
 
-
-function createQR(text) {
-	const folderPath = `${__dirname}/CodeQR/`;
-	const fileName = `qrcode_${Date.now()}.png`;
-	const filePath = `${folderPath}/${fileName}`;
-
-	// Tạo thư mục nếu chưa tồn tại
-	if (!fs.existsSync(folderPath)) {
-		fs.mkdirSync(folderPath, { recursive: true });
-	}
-
-	// Tạo mã QR và lưu dưới dạng file ảnh trong thư mục CodeQR
-	return new Promise((resolve, reject) => {
-		QRCode.toFile(filePath, text, (err) => {
-			if (err) {
-				reject('Lỗi: Không thể tạo file PNG mã QR');
-			} else {
-				resolve(filePath);
-				// alert('Mã QR đã được tạo và lưu thành công trong thư mục CodeQR!');
-			}
+			});
 		});
-	});
-}
-//////////////////////////////
-function checkStorage() {
-	var storedPathFolder = localStorage.getItem('pathFolder');
-	var storedPathCSV = localStorage.getItem('pathCSV');
-	if (storedPathFolder && storedPathCSV) {
-		document.getElementById('selectFolder').innerText = storedPathFolder;
-		document.getElementById('selectCSV').innerText = storedPathCSV;
-	}
-}
-function selectFoder() {
-	document.getElementById('selectFolder').addEventListener('click', async () => {
-		try {
-			var result = await window.cep.fs.showOpenDialog(false, true, "Select folder...");
-			// Check if the user selected a folder
-			if (result.err === 0 && result.data.length > 0) {
-				localStorage.setItem('pathFolder', replace20(result.data[0]));
-				document.getElementById('selectFolder').innerText = replace20(result.data[0]);
-			} else {
-				console.error('Error or user canceled:', result.err);
-			}
-		} catch (error) {
-			console.error('Error:', error);
-		}
-	});
 
-	document.getElementById('selectCSV').addEventListener('click', async () => {
-		try {
-			var result = await window.cep.fs.showOpenDialog(false, false, "Select CSV file...", "", ["csv"]);
-			// Check if the user selected a CSV file
-			if (result.err === 0 && result.data.length > 0) {
-				localStorage.setItem('pathCSV', replace20(result.data[0]));
-				document.getElementById('selectCSV').innerText = replace20(result.data[0]);
-			} else {
-				console.error('Error or user canceled:', result.err);
-			}
-		} catch (error) {
-			console.error('Error:', error);
-		}
-	});
-}
-function replace20(inputString) {
-	// Sử dụng phương thức .replace() với biểu thức chính quy để thay thế tất cả %20 thành khoảng trắng
-	var replacedString = inputString.replace(/%20/g, ' ');
-	return replacedString;
+	} catch (error) {
+		alert(error.message);
+	}
 }
 function getOS() {
 	var userAgent = window.navigator.userAgent,

@@ -3,83 +3,258 @@
 
 <head>
 
-	<meta charset="utf-8">
+    <meta charset="utf-8">
 
-	<link rel="stylesheet" href="css/styles.css" />
-	<link rel="stylesheet" href="./font/SofiaProRegular.ttf">
-	<title>Template 1a</title>
-	<script>
-		var isNS = (navigator.appName == "Netscape") ? 1 : 0;
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="./font/SofiaProRegular.ttf">
+    <title>Template 1a</title>
+    <script>
+        var isNS = (navigator.appName == "Netscape") ? 1 : 0;
 
-		if (navigator.appName == "Netscape") document.captureEvents(Event.MOUSEDOWN || Event.MOUSEUP);
+        if (navigator.appName == "Netscape") document.captureEvents(Event.MOUSEDOWN || Event.MOUSEUP);
 
-		function mischandler() {
-			return false;
-		}
+        function mischandler() {
+            return false;
+        }
 
-		function mousehandler(e) {
-			var myevent = (isNS) ? e : event;
-			var eventbutton = (isNS) ? myevent.which : myevent.button;
-			if ((eventbutton == 2) || (eventbutton == 3)) return false;
-		}
-		document.oncontextmenu = mischandler;
-		document.onmousedown = mousehandler;
-		document.onmouseup = mousehandler;
-	</script>
+        function mousehandler(e) {
+            var myevent = (isNS) ? e : event;
+            var eventbutton = (isNS) ? myevent.which : myevent.button;
+            if ((eventbutton == 2) || (eventbutton == 3)) return false;
+        }
+        document.oncontextmenu = mischandler;
+        document.onmousedown = mousehandler;
+        document.onmouseup = mousehandler;
+    </script>
+    <title>Tải và Giải Nén Tệp</title>
+    <style>
+        /* General Styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 10px;
+            color: #333;
+        }
 
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 30px;
+        }
+
+        /* Progress Container Styling */
+        .progress-container {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 10px auto;
+            width: 90%;
+            max-width: 800px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            /* gap: 2px; */
+        }
+
+        /* Button Styling */
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            height: 20px;
+            width: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        button:active {
+            background-color: #003f8f;
+        }
+
+        /* Progress Content Styling */
+        .progress-content {
+            /* flex: 1; */
+            /* display: flex; */
+            flex-direction: column;
+            margin-left: 15px;
+            gap: 1px;
+        }
+
+        /* Progress Details Styling */
+        .progress-details {
+            /* display: flex; */
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 9px;
+        }
+
+        .progress-details span {
+            margin-right: 10px;
+        }
+
+        #progress-text-1,
+        #progress-text-2 {
+            width: 30px;
+            display: inline-block;
+            text-align: center;
+            font-size: 10px;
+        }
+
+        /* Progress Bar Styling */
+        progress {
+            width: 200px;
+            height: 5px;
+            appearance: none;
+            border-radius: 5px;
+            overflow: hidden;
+            background-color: #e6e6e6;
+        }
+
+        progress::-webkit-progress-bar {
+            background-color: #e6e6e6;
+        }
+
+        progress::-webkit-progress-value {
+            background-color: #007bff;
+        }
+
+        progress::-moz-progress-bar {
+            background-color: #007bff;
+        }
+    </style>
 </head>
 
 <body scroll="no">
-	<div class="title1">
-		<h2>QR Tool</h2>
-		<h3>V1.0.1</h3>
-	</div>
-	<div class="box">
-		<div class="header">Select Folder Output:</div>
-		<div class="line">
-			<div class="input-container-full">
-				<div class="input-container">
-					<button id="selectFolder" class="custom-button"></button>
-				</div>
-			</div>
-		</div>
-	</div>
+    <h1>Tải và Giải Nén Tệp từ Server</h1>
 
-	<div class="box">
-		<div class="header">Select CSV File:</div>
-		<div class="line">
-			<div class="input-container-full">
-				<div class="input-container">
-					<button id="selectCSV" class="custom-button"></button>
-				</div>
-			</div>
-		</div>
-	</div>
-	<button id="btnRun" class="custom-button">Run</button>
+    <!-- Container for File 1 -->
+    <div class="progress-container">
+        <button id="download-button-1">Tải 1</button>
+        <div class="progress-content">
+            <div class="progress-details">
+                <span id="status-1">Trạng thái: Đang chờ...</span>
+                <span id="speed-1"></span>
+                <span id="downloaded-1"> 0 MB</span>
+            </div>
+            <progress id="progress-1" value="0" max="100"></progress>
+            <span id="progress-text-1">0%</span>
+        </div>
+    </div>
 
-	<script>
-		function getOS() {
-			var userAgent = window.navigator.userAgent,
-				platform = window.navigator.platform,
-				macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
-				windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
-				os = null;
+    <!-- Container for File 2 -->
+    <div class="progress-container">
+        <button id="download-button-2">Tải 2</button>
+        <div class="progress-content">
+            <div class="progress-details">
+                <span id="status-2">Trạng thái: Đang chờ...</span>
+                <span id="speed-2"></span>
+                <span id="downloaded-2">0 MB</span>
+            </div>
+            <progress id="progress-2" value="0" max="100"></progress>
+            <span id="progress-text-2">0%</span>
 
-			if (macosPlatforms.indexOf(platform) != -1) {
-				os = "MAC";
-			} else if (windowsPlatforms.indexOf(platform) != -1) {
-				os = "WIN";
-			}
-			return os;
-		}
-	</script>
-	<!-- //láy giờ -->
-	<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/momentjs/latest/moment-timezone.min.js"></script>
+        </div>
+    </div>
 
-	<script src="js/libs/CSInterface.js"></script>
-	<script src="js/main.js"></script>
-	<script src="./ext.js"></script>
+    <script>
+        // Mở kết nối WebSocket
+        const ws = new WebSocket('ws://localhost:8080');
+
+        // Xử lý khi nhận dữ liệu từ WebSocket
+        ws.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            const progressId = data.id;
+
+            if (progressId === 1) {
+                // Cập nhật tiến trình cho file 1
+                document.getElementById('progress-1').value = data.progress;
+                document.getElementById('progress-text-1').textContent = `${data.progress}%`;
+                if (data.speed) {
+                    document.getElementById('speed-1').textContent = ` ${data.speed}`;
+                }
+                // Hiển thị dữ liệu tải được
+                if (data.downloaded) {
+                    document.getElementById('downloaded-1').textContent = ` ${data.downloaded}`;
+                }
+                // Cập nhật trạng thái và thông báo
+                if (typeof data.progress === 'number') {
+                    if (data.progress < 50) {
+                        document.getElementById('status-1').textContent = 'Đang tải...';
+                    } else if (data.progress >= 50 && data.progress < 80) {
+                        document.getElementById('status-1').textContent = 'Đang giải nén...';
+                    } else if (data.progress === 100) {
+                        document.getElementById('speed-1').textContent = '';
+                        document.getElementById('status-1').textContent = 'Hoàn thành!';
+                    }
+                } else {
+                    // Nếu progress là một chuỗi (thông báo)
+                    document.getElementById('message-1').textContent = data.progress;
+                }
+            } else if (progressId === 2) {
+                // Cập nhật tiến trình cho file 2
+                document.getElementById('progress-2').value = data.progress;
+                document.getElementById('progress-text-2').textContent = `${data.progress}%`;
+                if (data.speed) {
+                    document.getElementById('speed-2').textContent = ` ${data.speed}`;
+                }
+                // Hiển thị dữ liệu tải được
+                if (data.downloaded) {
+                    document.getElementById('downloaded-2').textContent = ` ${data.downloaded}`;
+                }
+                // Cập nhật trạng thái và thông báo
+                if (typeof data.progress === 'number') {
+                    if (data.progress < 50) {
+                        document.getElementById('status-2').textContent = 'Đang tải...';
+                    } else if (data.progress >= 50 && data.progress < 80) {
+                        document.getElementById('status-2').textContent = 'Đang giải nén...';
+                    } else if (data.progress === 100) {
+                        document.getElementById('speed-2').textContent = '';
+                        document.getElementById('status-2').textContent = 'Hoàn thành!';
+                    }
+                } else {
+                    // Nếu progress là một chuỗi (thông báo)
+                    document.getElementById('message-2').textContent = data.progress;
+                }
+            }
+        };
+
+    </script>
+
+    <script>
+        function getOS() {
+            var userAgent = window.navigator.userAgent,
+                platform = window.navigator.platform,
+                macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
+                windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
+                os = null;
+
+            if (macosPlatforms.indexOf(platform) != -1) {
+                os = "MAC";
+            } else if (windowsPlatforms.indexOf(platform) != -1) {
+                os = "WIN";
+            }
+            return os;
+        }
+    </script>
+    <!-- //láy giờ -->
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment-timezone.min.js"></script>
+
+    <script src="js/libs/CSInterface.js"></script>
+    <script src="js/main.js"></script>
+    <script src="./ext.js"></script>
 </body>
 
 </html>
